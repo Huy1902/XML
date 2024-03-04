@@ -7,31 +7,6 @@
 #include <iostream>
 using namespace std;
 
-static void travel(XmlNode* parent)
-{
-	cout << "Elemet: " << parent->element << '\n';
-	if (parent->attribute_set.size() > 0)
-	{
-		cout << "Attribute: " << '\n';
-		for (const pair<string, string>& attribure : parent->attribute_set)
-		{
-			cout << attribure.first << ' ' << attribure.second << '\n';
-		}
-		cout << '\n';
-	}
-	for (XmlNode* ite : parent->child)
-	{
-		cout << "Go to child :" << '\n';
-		travel(ite);
-	}
-	cout << '\n';
-	if (parent->next_sib != nullptr)
-	{
-		cout << "Go to next sibling:\n";
-		travel(parent->next_sib);
-	}
-
-}
 
 void XmlTree::parse(const char* file_name)
 {
@@ -63,50 +38,61 @@ void XmlTree::parse(const char* file_name)
 
 		if (temp.substr(0, 2) != "</")
 		{
-			stringstream ss(temp);
-			char c;
-			string t;
-			ss >> c >> t;
+			if (temp.front() == '<')
+			{
+				stringstream ss(temp);
+				char c;
+				string t;
+				ss >> c >> t;
 
-			XmlNode* p_new_XmlNode = new XmlNode(t);
-			if (stack_XmlNode.size() > 0)
-			{
-				XmlNode* parent = stack_XmlNode.top();
-				if (parent->child.size() > 0)
+				XmlNode* p_new_XmlNode = new XmlNode(t);
+				if (stack_XmlNode.size() > 0)
 				{
-					XmlNode* last_child = parent->child.back();
-					last_child->next_sib = p_new_XmlNode;
-					p_new_XmlNode->prev_sib = last_child;
-				}
-				parent->child.push_back(p_new_XmlNode);
-				p_new_XmlNode->parent = parent;
-			}
-			else
-			{
-				mRoot = p_new_XmlNode;
-			}
-
-			if (temp.back() == '/')
-			{
-				string attribute;
-				while (ss >> attribute)
-				{
-					string::iterator ite = find(attribute.begin(), attribute.end(), '=');
-					string property = string(attribute.begin(), ite);
-					string value = string(++ite, attribute.end());
-					value.erase(remove(value.begin(), value.end(), '"'), value.end());
-					if (value.back() == '/')
+					XmlNode* parent = stack_XmlNode.top();
+					if (parent->child.size() > 0)
 					{
-						value.pop_back();
+						XmlNode* last_child = parent->child.back();
+						last_child->next_sib = p_new_XmlNode;
+						p_new_XmlNode->prev_sib = last_child;
 					}
+					parent->child.push_back(p_new_XmlNode);
+					p_new_XmlNode->parent = parent;
+				}
+				else
+				{
+					mRoot = p_new_XmlNode;
+				}
 
-					//cout << property << ' ' << value << '\n';
-					p_new_XmlNode->attribute_set[property] = value;
+				stack_XmlNode.push(p_new_XmlNode);
+
+				if (ss.eof() == false)
+				{
+					string attribute;
+					while (ss >> attribute)
+					{
+						string::iterator ite = find(attribute.begin(), attribute.end(), '=');
+						string property = string(attribute.begin(), ite);
+						string value = string(++ite, attribute.end());
+						value.erase(remove(value.begin(), value.end(), '"'), value.end());
+						if (value.back() == '/')
+						{
+							stack_XmlNode.pop();
+							value.pop_back();
+						}
+
+						//cout << property << ' ' << value << '\n';
+						p_new_XmlNode->attribute_set[property] = value;
+					}
+				}
+				else
+				{
+
 				}
 			}
 			else
 			{
-				stack_XmlNode.push(p_new_XmlNode);
+				XmlNode* element = stack_XmlNode.top();
+				element->text = temp;
 			}
 
 		}
@@ -115,6 +101,27 @@ void XmlTree::parse(const char* file_name)
 			stack_XmlNode.pop();
 		}
 	}
+}
 
-	travel(mRoot);
+void XmlNode::takeAttribute(const string& property, int* x)
+{
+	if (attribute_set.find(property) != attribute_set.end())
+	{
+		*x = stoi(attribute_set[property]);
+	}
+	else
+	{
+		throw "Not found";
+	}
+}
+void XmlNode::takeAttribute(const string& property, string* s)
+{
+	if (attribute_set.find(property) != attribute_set.end())
+	{
+		*s = stoi(attribute_set[property]);
+	}
+	else
+	{
+		throw "Not found";
+	}
 }
